@@ -303,7 +303,7 @@ filterNetwork<-function(rootgene, sifNetwork, exprsData, mergeBy="symbols", miRN
 #' @param nodeBg background of node
 #' @param nodeBorderColor a list of broder node color set. 
 #'                        nodeBorderColor's element must be gene and miRNA
-#' @param edgelwd the width of edge
+#' @param edgelwd the width of edge. It can be a column name of cifNetwork.
 #' @param ... any parameters can be passed to \link[graph:settings]{graph.par}
 #' @return An object of graphNEL class of the network
 #' @import graph
@@ -476,6 +476,19 @@ polishNetwork<-function(cifNetwork,
   }
   
   graph::nodeRenderInfo(gR) <- list(col=nodeBC, fill=colors, ...)
-  graph::edgeRenderInfo(gR) <- list(lwd=edgelwd)
+  if(length(edgelwd)==1 && edgelwd %in% colnames(cifNetwork)){
+    graph::edgeRenderInfo(gR) <- list(lwd=0.25)
+    lwdScore <- cifNetwork[, edgelwd, drop=TRUE]
+    rg <- range(lwdScore)
+    lwd <- findInterval(lwdScore, seq(from=rg[1], to=rg[2], length.out=10),
+                        all.inside = TRUE)
+    lwd <- lwd*.25
+    names(lwd) <- paste(cifNetwork$from, cifNetwork$to, sep='~')
+    lwd <- lwd[names(graph::edgeRenderInfo(gR, 'lwd'))]
+    graph::edgeRenderInfo(gR) <- list(lwd=lwd)
+  }else{
+    graph::edgeRenderInfo(gR) <- list(lwd=edgelwd)
+  }
+  
   gR
 }

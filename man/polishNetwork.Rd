@@ -34,7 +34,7 @@ Or the column names for the colors.}
 \item{nodeBorderColor}{a list of broder node color set. 
 nodeBorderColor's element must be gene and miRNA}
 
-\item{edgelwd}{the width of edge}
+\item{edgelwd}{the width of edge. It can be a column name of cifNetwork.}
 
 \item{...}{any parameters can be passed to \link[graph:settings]{graph.par}}
 }

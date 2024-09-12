@@ -41,7 +41,7 @@ cy3Network <- function(gR = graphNEL(), ...,
     commandsRun(string.cmd)
     network <- getNetworkSuid()
     stringstyle <- "STRING - From graph"
-    if(!stringstyle %in% availableStyles){
+    if(!stringstyle %in% getVisualStyleNames()){
       stop('Default string style is not in list.',
            'Please select correct one from the output of getVisualStyleNames()')
     }else{

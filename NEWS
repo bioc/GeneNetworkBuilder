@@ -1,3 +1,7 @@
+CHANGES IN VERSION 1.47.2
+-----------------------
+    o Add cy3Network function.
+    
 CHANGES IN VERSION 1.47.1
 -----------------------
     o Add edge line-width mapping for polishNetwork function.

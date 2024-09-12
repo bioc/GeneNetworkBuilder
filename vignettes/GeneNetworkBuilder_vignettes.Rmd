@@ -109,7 +109,7 @@ gR<-polishNetwork(cifNetwork=cifNetwork,
 ##show network
 (html <- browseNetwork(gR))
 ##save network
-exportNetwork(html, "network.html")
+exportNetwork(html, tempfile(fileext = ".network.html"))
 ```
 
 # Example using gene expression profile
@@ -167,7 +167,7 @@ plotNetwork(gR)
 ```{r exportxml}
 ##output file for cytoscape
 exportNetwork(browseNetwork(gR), 
-              file="network.xgmml", 
+              file=tempfile(fileext = ".network.xgmml"), 
               format = "XGMML")
 ##output the GXL file
 library("XML")

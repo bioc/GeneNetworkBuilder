@@ -120,7 +120,7 @@ test_polishNetwork<-function(){
         xxxf$info4 <- factor(sample(LETTERS,
                                     size = nrow(xxxf),
                                     replace = TRUE))
-        gR<-polishNetwork(xxxf)
+        gR<-polishNetwork(xxxf, edgeWeight=1)
         l<-RBGL::sp.between(gR,"A","E")
         checkEquals(l[[1]]$length,3)
     }

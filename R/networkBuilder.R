@@ -97,7 +97,7 @@ convertID<-function(x, IDsMap, ByName=c("from", "to")){
 buildNetwork<-function(TFbindingTable, interactionmap, level=3){
     checkMap(interactionmap, TFbindingTable)
     if(level>0){
-        y<-interactionmap[interactionmap[ , "from"] %in% unique(as.character(TFbindingTable[ , "to"])), 1:2,drop=F]
+        y<-interactionmap[interactionmap[ , "from"] %in% unique(as.character(TFbindingTable[ , "to"])), ,drop=F]
         y<-unique(y)
         z<-y[!(y[,"to"] %in% TFbindingTable[,"to"]), , drop=F]
         nrow1<-nrow(TFbindingTable)
@@ -303,7 +303,7 @@ filterNetwork<-function(rootgene, sifNetwork, exprsData, mergeBy="symbols", miRN
 #' @param nodeBg background of node
 #' @param nodeBorderColor a list of broder node color set. 
 #'                        nodeBorderColor's element must be gene and miRNA
-#' @param edgelwd the width of edge. It can be a column name of cifNetwork.
+#' @param edgeWeight the weight of edge. It can be a column name of cifNetwork.
 #' @param ... any parameters can be passed to \link[graph:settings]{graph.par}
 #' @return An object of graphNEL class of the network
 #' @import graph
@@ -328,7 +328,7 @@ polishNetwork<-function(cifNetwork,
                         nodesDefaultSize=48, useLogFCAsWeight=FALSE, 
                         nodecolor=colorRampPalette(c("green", "yellow", "red"))(5), nodeBg="white",
                         nodeBorderColor=list(gene='darkgreen',miRNA='darkblue'), 
-                        edgelwd=0.25, ...)
+                        edgeWeight=0.25, ...)
 {
   cname<-c("from", "to")
   if(!is.data.frame(cifNetwork)){
@@ -476,9 +476,11 @@ polishNetwork<-function(cifNetwork,
   }
   
   graph::nodeRenderInfo(gR) <- list(col=nodeBC, fill=colors, ...)
-  if(length(edgelwd)==1 && edgelwd %in% colnames(cifNetwork)){
+  cifNetwork.s <- cifNetwork[!is.na(cifNetwork$from) & !is.na(cifNetwork$to),
+                             , drop=FALSE]
+  if(length(edgeWeight)==1 && edgeWeight %in% colnames(cifNetwork)){
     graph::edgeRenderInfo(gR) <- list(lwd=0.25)
-    lwdScore <- cifNetwork[, edgelwd, drop=TRUE]
+    lwdScore <- cifNetwork[, edgeWeight, drop=TRUE]
     rg <- range(lwdScore)
     lwd <- findInterval(lwdScore, seq(from=rg[1], to=rg[2], length.out=10),
                         all.inside = TRUE)
@@ -486,8 +488,16 @@ polishNetwork<-function(cifNetwork,
     names(lwd) <- paste(cifNetwork$from, cifNetwork$to, sep='~')
     lwd <- lwd[names(graph::edgeRenderInfo(gR, 'lwd'))]
     graph::edgeRenderInfo(gR) <- list(lwd=lwd)
+    graph::edgeData(gR,
+                    from=as.character(cifNetwork.s[, 'from', drop=TRUE]),
+                    to=as.character(cifNetwork.s[, 'to', drop=TRUE]),
+                    'weight') <- cifNetwork.s[, edgeWeight, drop=TRUE]
   }else{
-    graph::edgeRenderInfo(gR) <- list(lwd=edgelwd)
+    graph::edgeRenderInfo(gR) <- list(lwd=edgeWeight)
+    graph::edgeData(gR,
+                    from=as.character(cifNetwork.s[, 'from', drop=TRUE]),
+                    to=as.character(cifNetwork.s[, 'to', drop=TRUE]),
+                    'weight') <- edgeWeight
   }
   
   gR

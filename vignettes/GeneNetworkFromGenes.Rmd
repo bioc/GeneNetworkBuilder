@@ -63,7 +63,7 @@ try({ ## just in case STRINGdb not work
                                size = nrow(cifNetwork),
                                replace = TRUE)
     ## polish network
-    gR<-polishNetwork(cifNetwork)
+    gR<-polishNetwork(cifNetwork, edgeWeight='combined_score')
     ## browse network
     browseNetwork(gR)
     
@@ -92,7 +92,7 @@ try({ ## just in case STRINGdb not work
     names(IDsMap) <- expressionData$symbols
     cifNetwork <- convertID(cifNetwork, IDsMap)
     ## polish network
-    gR<-polishNetwork(cifNetwork)
+    gR<-polishNetwork(cifNetwork, edgeWeight = 'combined_score')
     ## browse network
     browseNetwork(gR)
 })
@@ -111,3 +111,14 @@ if(!is.null(gR)){
   browseNetwork(gRs)
 }
 ```
+## Communicate with cytoscape
+
+If you have [`RCy3`](https://bioconductor.org/packages/RCy3) package installed,
+the gRs can be visualized in cytoscape (>=3.6.1).
+
+```{r rcy3, eval=FALSE}
+cy3Network(gRs)
+```
+
+
+

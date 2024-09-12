@@ -22,7 +22,7 @@ networkFromGenes <- function(genes, interactionmap, level=3, unrooted=FALSE){
   if(level>0){
     y<-interactionmap[interactionmap[ , "from"] %in%
                         unique(as.character(genes)),
-                      1:2,drop=FALSE]
+                      ,drop=FALSE]
     TFbindingTable<-unique(y)
     level<-level-1
     if(level>0){

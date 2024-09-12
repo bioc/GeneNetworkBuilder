@@ -1,6 +1,6 @@
 Package: GeneNetworkBuilder
 Type: Package
-Version: 1.47.1
+Version: 1.47.2
 Title: GeneNetworkBuilder: a bioconductor package for building regulatory network using ChIP-chip/ChIP-seq data and Gene Expression Data
 Authors@R: c(person("Jianhong Ou", "Developer", role = c("aut", "cre"),
         email = "jianhong.ou@duke.edu"), person("Lihua Julie Zhu",
@@ -12,6 +12,7 @@ Imports:
     graph,
     htmlwidgets,
     Rgraphviz,
+    RCy3,
     rjson,
     XML,
     methods,
@@ -26,7 +27,6 @@ Suggests:
     BiocGenerics,
     RBGL,
     knitr,
-    simpIntLists,
     shiny,
     STRINGdb,
     BiocStyle,

@@ -37,6 +37,7 @@ cy3Network <- function(gR = graphNEL(), ...,
   style <- match.arg(style, choices = availableStyles)
   network <- createNetworkFromGraph(gR, ...)
   if(stringify){
+    ## doc https://github.com/RBVI/stringApp/blob/master/doc_automation.md#compound-query
     string.cmd = paste0('string stringify column="name" networkNoGui="current" species="', species, '"')
     commandsRun(string.cmd)
     network <- getNetworkSuid()

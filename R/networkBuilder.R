@@ -290,13 +290,12 @@ filterNetwork<-function(rootgene, sifNetwork, exprsData, mergeBy="symbols", miRN
 
 #' generate an object of grahpNEL to represent the regulation network
 #' @description generate an object of grahpNEL to represent the regulation network. 
-#' Each node will has three attributes: size, borderColor and fill.
+#' Each node will has three attributes: size, borderColor and fill. 
+#' The size will be mapped to the length of its edges. The node fill color will 
+#' be mapped to logFC.
 #' @param cifNetwork dataframe used to draw network graph. column names of 
 #'                   cifNetwork must contain 'from', 'to', 'logFC' and 'miRNA'
 #' @param nodesDefaultSize nodes default size
-#' @param useLogFCAsWeight how to determine the weights for each nodes. 
-#'                         If TURE, use logFC value as weight.
-#'                         If FALSE, use constant 1 as weight.
 #' @param nodecolor a character vector of color set. 
 #'                  The node color will be mapped to color set by log fold change.
 #'                  Or the column names for the colors.
@@ -304,6 +303,8 @@ filterNetwork<-function(rootgene, sifNetwork, exprsData, mergeBy="symbols", miRN
 #' @param nodeBorderColor a list of broder node color set. 
 #'                        nodeBorderColor's element must be gene and miRNA
 #' @param edgeWeight the weight of edge. It can be a column name of cifNetwork.
+#' @param edgelwd the default width of edge. If edgeWeight is set, the edgelwd 
+#' will be mapped to the edgeWeight.
 #' @param ... any parameters can be passed to \link[graph:settings]{graph.par}
 #' @return An object of graphNEL class of the network
 #' @import graph
@@ -325,10 +326,11 @@ filterNetwork<-function(rootgene, sifNetwork, exprsData, mergeBy="symbols", miRN
 #' @keywords network
 #' 
 polishNetwork<-function(cifNetwork, 
-                        nodesDefaultSize=48, useLogFCAsWeight=FALSE, 
-                        nodecolor=colorRampPalette(c("green", "yellow", "red"))(5), nodeBg="white",
+                        nodesDefaultSize=48,
+                        nodecolor=colorRampPalette(c("green", "yellow", "red"))(5),
+                        nodeBg="white",
                         nodeBorderColor=list(gene='darkgreen',miRNA='darkblue'), 
-                        edgeWeight=0.25, ...)
+                        edgeWeight=NA, edgelwd=0.25, ...)
 {
   cname<-c("from", "to")
   if(!is.data.frame(cifNetwork)){
@@ -357,19 +359,23 @@ polishNetwork<-function(cifNetwork,
   if(length(node) <= 1){
     stop("Can not built network for the inputs. Too less connections.")
   }
-  edL<-split(cifNetwork[,c("to","logFC")],cifNetwork[,"from"])
-  edL<-lapply(node,function(.ele,edL,useLogFCAsWeight){
+  if(length(edgeWeight)==1 && edgeWeight %in% colnames(cifNetwork)){
+    cifNetwork[is.na(cifNetwork[, edgeWeight]), edgeWeight] <- 0
+  }
+  edL<-split(cifNetwork,cifNetwork[,"from"])
+  edL<-lapply(node,function(.ele){
     .ele<-edL[[.ele]]
     if(is.null(.ele)){
       .ele<-list(edges=c(),weights=c())
     }else{
-      if(useLogFCAsWeight){
-        .ele<-list(edges=as.character(.ele$to),weights=abs(.ele$logFC))
+      if(length(edgeWeight)==1 && edgeWeight %in% colnames(.ele)){
+        .ele<-list(edges=as.character(.ele$to),
+                   weights=abs(.ele[, edgeWeight, drop=TRUE]))
       }else{
         .ele<-list(edges=as.character(.ele$to),weights=rep(1,length(.ele$to)))
       }
     }
-  },edL,useLogFCAsWeight)
+  })
   names(edL)<-node
   gR<-new("graphNEL", nodes=node, edgeL=edL, edgemode="directed")
   ## set node default data
@@ -479,25 +485,17 @@ polishNetwork<-function(cifNetwork,
   cifNetwork.s <- cifNetwork[!is.na(cifNetwork$from) & !is.na(cifNetwork$to),
                              , drop=FALSE]
   if(length(edgeWeight)==1 && edgeWeight %in% colnames(cifNetwork)){
-    graph::edgeRenderInfo(gR) <- list(lwd=0.25)
+    graph::edgeRenderInfo(gR) <- list(lwd=edgelwd)
     lwdScore <- cifNetwork[, edgeWeight, drop=TRUE]
     rg <- range(lwdScore)
     lwd <- findInterval(lwdScore, seq(from=rg[1], to=rg[2], length.out=10),
                         all.inside = TRUE)
-    lwd <- lwd*.25
+    lwd <- lwd*edgelwd
     names(lwd) <- paste(cifNetwork$from, cifNetwork$to, sep='~')
     lwd <- lwd[names(graph::edgeRenderInfo(gR, 'lwd'))]
     graph::edgeRenderInfo(gR) <- list(lwd=lwd)
-    graph::edgeData(gR,
-                    from=as.character(cifNetwork.s[, 'from', drop=TRUE]),
-                    to=as.character(cifNetwork.s[, 'to', drop=TRUE]),
-                    'weight') <- cifNetwork.s[, edgeWeight, drop=TRUE]
   }else{
-    graph::edgeRenderInfo(gR) <- list(lwd=edgeWeight)
-    graph::edgeData(gR,
-                    from=as.character(cifNetwork.s[, 'from', drop=TRUE]),
-                    to=as.character(cifNetwork.s[, 'to', drop=TRUE]),
-                    'weight') <- edgeWeight
+    graph::edgeRenderInfo(gR) <- list(lwd=edgelwd)
   }
   
   gR

@@ -49,7 +49,11 @@ browseNetwork <- function(gR = graphNEL(),
   df$nodeY <- as.numeric(as.character(df1[rownames(df), "nodeY"]))
   df$id <- rownames(df)
   size.range <- range(df$size, na.rm=TRUE)
-  df$fontSize <- 36*(df$size - size.range[1])/diff(size.range) + 12
+  if(length(unique(size.range))<2){
+    df$fontSize <- 30
+  }else{
+    df$fontSize <- 36*(df$size - size.range[1])/diff(size.range) + 12
+  }
   
   nodesDf2json <- function(df){
     nodes <- lapply(rownames(df), function(i){

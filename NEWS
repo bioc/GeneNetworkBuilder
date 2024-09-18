@@ -1,3 +1,7 @@
+CHANGES IN VERSION 1.47.4
+-----------------------
+    o Add nodeData parameter to polishNetwork function.
+    
 CHANGES IN VERSION 1.47.3
 -----------------------
     o Fix the duplicated parameters in polishNetwork function.

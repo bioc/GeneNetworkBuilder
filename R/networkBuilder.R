@@ -295,6 +295,8 @@ filterNetwork<-function(rootgene, sifNetwork, exprsData, mergeBy="symbols", miRN
 #' be mapped to logFC.
 #' @param cifNetwork dataframe used to draw network graph. column names of 
 #'                   cifNetwork must contain 'from', 'to', 'logFC' and 'miRNA'
+#' @param nodeData The node data. If it is not provide, node data will be 
+#' retrieved from cifNetwork for the 'to' nodes.
 #' @param nodesDefaultSize nodes default size
 #' @param nodecolor a character vector of color set. 
 #'                  The node color will be mapped to color set by log fold change.
@@ -325,31 +327,19 @@ filterNetwork<-function(rootgene, sifNetwork, exprsData, mergeBy="symbols", miRN
 #' ##	browseNetwork(gR)
 #' @keywords network
 #' 
-polishNetwork<-function(cifNetwork, 
+polishNetwork<-function(cifNetwork,
+                        nodeData,
                         nodesDefaultSize=48,
                         nodecolor=colorRampPalette(c("green", "yellow", "red"))(5),
                         nodeBg="white",
                         nodeBorderColor=list(gene='darkgreen',miRNA='darkblue'), 
-                        edgeWeight=NA, edgelwd=0.25, ...)
+                        edgeWeight=NA, edgelwd=0.5, ...)
 {
   cname<-c("from", "to")
   if(!is.data.frame(cifNetwork)){
     stop("cifNetwork should be a data.frame")
   }
-  if(length(intersect(c("from", "to", "logFC", "miRNA"), colnames(cifNetwork)))<4){
-    stop("colnames of cifNetwork must contain 'from', 'to', 'logFC' and 'miRNA'");
-  }
-  preDefinedColor <- FALSE
-  if(length(nodecolor) < 2){
-    if(nodecolor %in% colnames(cifNetwork)){
-      preDefinedColor <- TRUE
-    }else{
-      stop("nodecolor should have more than 1 elements")
-    }
-  }
-  if(length(setdiff(c('gene', 'miRNA'), names(nodeBorderColor))) > 0){
-    stop("nodeBorderColor's element must be 'gene' and 'miRNA'")
-  }
+  
   cifNetwork<-cifNetwork[!duplicated(cifNetwork[,cname]), ]
   edge<-cifNetwork[cifNetwork$from!="" & cifNetwork$to!="", cname]
   node<-c(as.character(unlist(edge)))
@@ -359,10 +349,48 @@ polishNetwork<-function(cifNetwork,
   if(length(node) <= 1){
     stop("Can not built network for the inputs. Too less connections.")
   }
+  
+  if(missing(nodeData)){
+    if(length(intersect(c("from", "to", "logFC"), colnames(cifNetwork)))<3){
+      stop("colnames of cifNetwork must contain 'from', 'to', and 'logFC'");
+    }
+    nodeData <- cifNetwork[, !colnames(cifNetwork) %in% c("from", "dir"),
+                           drop=FALSE]
+    nodeData <- nodeData[!duplicated(nodeData[, "to"]), , drop=FALSE]
+    rownames(nodeData) <- nodeData[, 'to', drop=TRUE]
+    nodeData$to <- NULL
+  }else{
+    stopifnot(length(dim(nodeData))==2)
+    if(length(rownames(nodeData))==0){
+      stop('nodeData must have rownames ',
+      'and the rownames should be the names ofthe nodes.')
+    }
+    if(!all(node %in% rownames(nodeData))){
+      warning('not all nodes is in the rownames of nodeData')
+    }
+  }
+  preDefinedColor <- FALSE
+  if(length(nodecolor) < 2){
+    if(nodecolor %in% colnames(nodeData)){
+      preDefinedColor <- TRUE
+    }else{
+      stop("nodecolor should have more than 1 elements")
+    }
+  }
+  if(all(c('gene', 'miRNA') %in% colnames(cifNetwork))){
+    if(length(setdiff(c('gene', 'miRNA'), names(nodeBorderColor))) > 0){
+      stop("nodeBorderColor's element must be 'gene' and 'miRNA'")
+    }
+  }else{
+    if(!'gene' %in% names(nodeBorderColor)){
+      nodeBorderColor[["gene"]] <- 'darkgreen'
+    }
+  }
+  
   if(length(edgeWeight)==1 && edgeWeight %in% colnames(cifNetwork)){
     cifNetwork[is.na(cifNetwork[, edgeWeight]), edgeWeight] <- 0
   }
-  edL<-split(cifNetwork,cifNetwork[,"from"])
+  edL<-split(cifNetwork, cifNetwork[,"from"])
   edL<-lapply(node,function(.ele){
     .ele<-edL[[.ele]]
     if(is.null(.ele)){
@@ -380,43 +408,29 @@ polishNetwork<-function(cifNetwork,
   gR<-new("graphNEL", nodes=node, edgeL=edL, edgemode="directed")
   ## set node default data
   nodeDataDefaults(gR, attr="label") <- NA
-  nodeDataDefaults(gR, attr="logFC") <- 0
-  nodeDataDefaults(gR, attr="miRNA") <- FALSE
+  nodeDataDefaults(gR, attr="fill")<-nodeBg
+  nodeDataDefaults(gR, attr="size")<-nodesDefaultSize
+  nodeDataDefaults(gR, attr='borderColor') <- nodeBorderColor[["gene"]]
   for(i in node) {
     nodeData(gR, n=i, attr="label") <- i
-    nodeData(gR, n=i, attr="logFC") <-
-      cifNetwork[match(i, cifNetwork$to), "logFC"]
-    nodeData(gR, n=i, attr="miRNA") <-
-      cifNetwork[match(i, cifNetwork$to), "miRNA"]
-  }
-  ## set node size
-  nodeDataDefaults(gR, attr="size")<-nodesDefaultSize
-  for(i in unique(as.character(cifNetwork$from))){
-    if(!is.na(i)){
-      nodeData(gR, n=i, attr="size")<-
-        ceiling(5*length(edL[[i]]$edges)/length(node)) *
-        nodesDefaultSize/2 + nodesDefaultSize
-    }
   }
   ## add additional message 
-  additionalInfoColAll <- colnames(cifNetwork)
+  additionalInfoColAll <- colnames(nodeData)
   additionalInfoColAll <-
     additionalInfoColAll[!additionalInfoColAll %in%
-                        c("to", "from", "gene", "P.Value", "logFC", "miRNA",
-                          "dir")]
+                           c("to", "from", "dir")]
   addAdditionalInfo <- function(gR, types, defaultValue){
     additionalInfoCol <- additionalInfoColAll[
       vapply(additionalInfoColAll, FUN=function(.e){
-        inherits(cifNetwork[, .e], types) &&
-          length(unique(cifNetwork[, .e])) > 1
+        inherits(nodeData[, .e], types) &&
+          length(unique(nodeData[, .e])) > 1
       }, FUN.VALUE=FALSE)
     ]
     if(length(additionalInfoCol)){
       for(j in additionalInfoCol){
         nodeDataDefaults(gR, attr=j)<-defaultValue
-        for(i in unique(as.character(cifNetwork$from))){
-          nodeData(gR, n=i, attr=j) <-
-            cifNetwork[match(i, cifNetwork$to), j]
+        for(i in intersect(node, rownames(nodeData))){
+          nodeData(gR, n=i, attr=j) <- nodeData[i, j]
         }
       }
     }
@@ -426,72 +440,64 @@ polishNetwork<-function(cifNetwork,
   gR <- addAdditionalInfo(gR, c("character", "factor"), "")
   ## additional numeric logical
   gR <- addAdditionalInfo(gR, c("numeric", "logical"), NA)
+  ## set node size
+  if(!'size' %in% colnames(nodeData)){
+    for(i in unique(as.character(cifNetwork$from))){
+      if(!is.na(i)){
+        nodeData(gR, n=i, attr="size")<-
+          ceiling(5*length(edL[[i]]$edges)/length(node)) *
+          nodesDefaultSize/2 + nodesDefaultSize
+      }
+    }
+  }
   
-  ## set node color    
-  nodeDataDefaults(gR, attr="fill")<-nodeBg
-  if(!preDefinedColor){
-    lfcMax<-ceiling(max(abs(cifNetwork[!is.na(cifNetwork$logFC),"logFC"])))
-    lfcSeq<-seq(-1*lfcMax,lfcMax,length.out=length(nodecolor)+1)
-    colset<-unique(cifNetwork[!is.na(cifNetwork$logFC),c("to","logFC")])
-    colset<-apply(colset, 1, function(.ele,color,lfcSeq){
-      id=0
-      for(i in 1:length(lfcSeq)){
-        .elelfc<-as.numeric(as.character(.ele[2]))
-        if(lfcSeq[i]<=.elelfc & lfcSeq[i+1]>=.elelfc){
-          id=i
-          break
+  ## set node color
+  if(!'fill' %in% colnames(nodeData)){
+    if(!preDefinedColor){
+      if('logFC' %in% colnames(nodeData)){
+        lfc <- nodeData[, 'logFC', drop=TRUE]
+        lfcMax<-ceiling(max(abs(lfc[!is.infinite(lfc)]), na.rm = TRUE))
+        lfcSeq<-seq(-1*lfcMax,lfcMax,length.out=length(nodecolor)+1)
+        lfc[is.infinite(lfc)] <- sign(lfc) * lfcMax
+        colors <- nodecolor[findInterval(lfc, lfcSeq, all.inside = TRUE)]
+        names(colors) <- rownames(nodeData)
+        colors[is.na(colors)] <- nodeBg
+        for(i in intersect(node, names(colors))){
+          nodeData(gR, n=i, attr="fill") <- colors[i]
         }
       }
-      if(id!=0){
-        c(.ele,nodecolor[id])
-      }else{
-        c(.ele,nodeBg)
-      }
-    },nodecolor,lfcSeq)
-    colors<-colset[3,]
-    names(colors)<-colset[1,]
-    for(i in names(colors)){
-      nodeData(gR, n=i, attr="fill")<-colors[i]
-    }
-    colset<-node[!node %in% names(colors)]
-    names(colset)<-colset
-    colset<-nodeBg
-    colors<-c(colors,colset)
-  }else{
-    colors <- cifNetwork[match(node, cifNetwork$to), nodecolor]
-    names(colors) <- node
-    colors[is.na(colors)] <- nodeBg
-    for(i in node) {
-      tmp <- cifNetwork[match(i, cifNetwork$to), nodecolor]
-      nodeData(gR, n=i, attr="fill") <- 
-        ifelse(is.na(tmp), nodeBg, tmp)
-    }
-  }
-  ## set node border color    
-  miRNAs<-unique(as.character(cifNetwork[cifNetwork[,"miRNA"],"to"]))
-  nodeBC<-character(length(node))
-  names(nodeBC)<-node
-  nodeDataDefaults(gR, attr="borderColor")<-nodeBorderColor$gene
-  for(i in node) {
-    if(i %in% miRNAs){
-      nodeBC[i]<-nodeBorderColor$miRNA
-      nodeData(gR, n=i, attr="borderColor")<-nodeBorderColor$miRNA
     }else{
-      nodeBC[i]<-nodeBorderColor$gene
+      colors <- nodeData[, nodecolor, drop=FALSE]
+      for(i in intersect(node, rownames(colors))) {
+        nodeData(gR, n=i, attr="fill") <- colors[i, nodecolor, drop=TRUE]
+      }
     }
   }
   
-  graph::nodeRenderInfo(gR) <- list(col=nodeBC, fill=colors, ...)
+  ## set node border color
+  if('miRNA' %in% colnames(nodeData) &&
+     'miRNA' %in% names(nodeBorderColor) &&
+     !'borderColor' %in% colnames(nodeData)){
+    if(is.logical(nodeData$miRNA)){
+      miRNAs<-rownames(nodeData[nodeData[,"miRNA"], , drop=FALSE])
+      for(i in intersect(node, miRNAs)){
+        nodeData(gR, n=i, attr="borderColor")<-nodeBorderColor$miRNA
+      }
+    }
+  }
+  graph::nodeRenderInfo(gR) <- list(col=nodeData(gR, attr='borderColor'),
+                                    fill=nodeData(gR, attr='fill'),
+                                    ...)
   cifNetwork.s <- cifNetwork[!is.na(cifNetwork$from) & !is.na(cifNetwork$to),
                              , drop=FALSE]
   if(length(edgeWeight)==1 && edgeWeight %in% colnames(cifNetwork)){
     graph::edgeRenderInfo(gR) <- list(lwd=edgelwd)
-    lwdScore <- cifNetwork[, edgeWeight, drop=TRUE]
+    lwdScore <- cifNetwork.s[, edgeWeight, drop=TRUE]
     rg <- range(lwdScore)
     lwd <- findInterval(lwdScore, seq(from=rg[1], to=rg[2], length.out=10),
                         all.inside = TRUE)
     lwd <- lwd*edgelwd
-    names(lwd) <- paste(cifNetwork$from, cifNetwork$to, sep='~')
+    names(lwd) <- paste(cifNetwork.s$from, cifNetwork.s$to, sep='~')
     lwd <- lwd[names(graph::edgeRenderInfo(gR, 'lwd'))]
     graph::edgeRenderInfo(gR) <- list(lwd=lwd)
   }else{

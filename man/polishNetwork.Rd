@@ -6,18 +6,22 @@
 \usage{
 polishNetwork(
   cifNetwork,
+  nodeData,
   nodesDefaultSize = 48,
   nodecolor = colorRampPalette(c("green", "yellow", "red"))(5),
   nodeBg = "white",
   nodeBorderColor = list(gene = "darkgreen", miRNA = "darkblue"),
   edgeWeight = NA,
-  edgelwd = 0.25,
+  edgelwd = 0.5,
   ...
 )
 }
 \arguments{
 \item{cifNetwork}{dataframe used to draw network graph. column names of 
 cifNetwork must contain 'from', 'to', 'logFC' and 'miRNA'}
+
+\item{nodeData}{The node data. If it is not provide, node data will be 
+retrieved from cifNetwork for the 'to' nodes.}
 
 \item{nodesDefaultSize}{nodes default size}
 
@@ -43,8 +47,8 @@ An object of graphNEL class of the network
 \description{
 generate an object of grahpNEL to represent the regulation network. 
 Each node will has three attributes: size, borderColor and fill. 
-The size will be mapped to the length of its edges. The fill color will 
-be mapped to
+The size will be mapped to the length of its edges. The node fill color will 
+be mapped to logFC.
 }
 \examples{
 data("ce.miRNA.map")

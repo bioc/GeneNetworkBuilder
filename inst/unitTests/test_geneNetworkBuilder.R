@@ -48,13 +48,13 @@ test_filterNetwork<-function(){
                              "B","D",
                              "C","E",
                              "C","F",
-							 "C","H",
+                             "C","H",
                              "D","E",
-							 "D","I",
-							 "F","G",
-							 "F","K",
-							 "G","L",
-							 "I","J"),
+                             "D","I",
+                             "F","G",
+                             "F","K",
+                             "G","L",
+                             "I","J"),
                            ncol=2,byrow=TRUE)
     colnames(interactionmap)<-c("from","to")
     x<-matrix(c("A","A"),ncol=2)
@@ -91,10 +91,10 @@ test_polishNetwork<-function(){
                              "D","E",
                              "C","E",
                              "C","F",
-							 "C","H",
-							 "F","G",
-							 "D","I",
-							 "I","J"),
+                             "C","H",
+                             "F","G",
+                             "D","I",
+                             "I","J"),
                            ncol=2,byrow=TRUE)
     colnames(interactionmap)<-c("from","to")
     x<-matrix(c("A","A"),ncol=2)
